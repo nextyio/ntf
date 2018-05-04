@@ -1,6 +1,6 @@
 pragma solidity ^0.4.21;
 
-import "./SuspendableToken.sol";
+import "./BasicToken.sol";
 import "./ERC20.sol";
 
 
@@ -11,7 +11,7 @@ import "./ERC20.sol";
  * @dev https://github.com/ethereum/EIPs/issues/20
  * @dev Based on code by FirstBlood: https://github.com/Firstbloodio/token/blob/master/smart_contract/FirstBloodToken.sol
  */
-contract StandardToken is ERC20, SuspendableToken {
+contract StandardToken is ERC20, BasicToken {
 
   mapping (address => mapping (address => uint256)) internal allowed;
 
@@ -23,19 +23,12 @@ contract StandardToken is ERC20, SuspendableToken {
    * @param _value uint256 the amount of tokens to be transferred
    */
   function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
-    require(_to != address(0x0));
+    require(_to != address(0));
     require(_value <= balances[_from]);
     require(_value <= allowed[_from][msg.sender]);
 
-    bytes32 _txId = keccak256(_from, _to, _value, block.timestamp, block.difficulty);
-    Transaction memory tnx = Transaction({
-      txId: _txId,
-      from: _from,
-      to: _to,
-      amount: _value
-    });
-    pendingTransfers[_from].push(tnx);
-    pendingReceives[_to].push(tnx);
+    balances[_from] = balances[_from].sub(_value);
+    balances[_to] = balances[_to].add(_value);
     allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
     emit Transfer(_from, _to, _value);
     return true;

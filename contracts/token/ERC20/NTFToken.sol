@@ -33,7 +33,7 @@ contract NTFToken is StandardSuspendableToken {
         
     // Mint tokens
     balances[msg.sender] = totalSupply_;
-    Transfer(address(0x0), msg.sender, totalSupply_);
+    emit Transfer(address(0x0), msg.sender, totalSupply_);
   }
 
   /**
@@ -42,7 +42,7 @@ contract NTFToken is StandardSuspendableToken {
    * @param _to Destination address
    * @param _value Amount of NTF token to send
    */
-  function transfer(address _to, uint256 _value) public validDestination(to) returns (bool) {
+  function transfer(address _to, uint256 _value) public validDestination(_to) returns (bool) {
     return super.transfer(_to, _value);
   }
   
@@ -53,7 +53,7 @@ contract NTFToken is StandardSuspendableToken {
    * @param _to Destination address
    * @param _value Amount of NTF token to send
    */
-  function transferFrom(address _from, address _to, uint256 _value) public validDestination(to) returns (bool) {
+  function transferFrom(address _from, address _to, uint256 _value) public validDestination(_to) returns (bool) {
     return super.transferFrom(_from, _to, _value);
   }
 }

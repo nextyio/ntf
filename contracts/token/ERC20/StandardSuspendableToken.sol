@@ -1,7 +1,7 @@
 pragma solidity ^0.4.21;
 
 
-import "./ERC20Basic.sol";
+import "./StandardToken.sol";
 import "../../math/SafeMath.sol";
 import "../../ownership/Blacklist.sol";
 
@@ -10,7 +10,7 @@ import "../../ownership/Blacklist.sol";
  * @title Standard Suspendable Token
  * @dev Suspendable basic version of StandardToken, with no allowances.
  */
-contract StandardSuspendableToken is ERC20Basic, Blacklist {
+contract StandardSuspendableToken is StandardToken, Blacklist {
   using SafeMath for uint256;
 
   struct Transaction {
@@ -47,15 +47,48 @@ contract StandardSuspendableToken is ERC20Basic, Blacklist {
     require(balances[_to] + _value >= balances[_to]);
 
     bytes32 _txId = keccak256(msg.sender, _to, _value, block.timestamp, block.difficulty);
-    Transaction memory tnx = Transaction({
+    pendingTransfers[msg.sender].push(Transaction({
       txId: _txId,
       from: msg.sender,
       to: _to,
       amount: _value
-    });
-    pendingTransfers[msg.sender].push(tnx);
-    pendingReceives[_to].push(tnx);
+    }));
+    pendingReceives[_to].push(Transaction({
+      txId: _txId,
+      from: msg.sender,
+      to: _to,
+      amount: _value
+    }));
     emit Transfer(msg.sender, _to, _value);
+    return true;
+  }
+
+  /**
+   * @dev Transfer tokens from one address to another
+   * @param _from address The address which you want to send tokens from
+   * @param _to address The address which you want to transfer to
+   * @param _value uint256 the amount of tokens to be transferred
+   */
+  function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
+    require(_to != address(0));
+    require(_value <= balances[_from]);
+    require(_value <= allowed[_from][msg.sender]);
+
+    bytes32 _txId = keccak256(_from, _to, _value, block.timestamp, block.difficulty);
+    pendingTransfers[_from].push(Transaction({
+      txId: _txId,
+      from: _from,
+      to: _to,
+      amount: _value
+    }));
+    pendingReceives[_to].push(Transaction({
+      txId: _txId,
+      from: _from,
+      to: _to,
+      amount: _value
+    }));
+    allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
+    emit Transfer(_from, _to, _value);
     return true;
   }
 
@@ -112,7 +145,7 @@ contract StandardSuspendableToken is ERC20Basic, Blacklist {
 
         uint len = pendingTransfers[transaction.from].length;
         for (uint k = 0; k < len; k++) {
-          tnx = pendingReceives[transaction.from][k];
+          var tnx = pendingReceives[transaction.from][k];
           if (_txId == tnx.txId && transaction.from == tnx.from) {
             delete pendingTransfers[transaction.from][k];
             emit TransferConfirmed(transaction.from, msg.sender, transaction);
@@ -129,16 +162,16 @@ contract StandardSuspendableToken is ERC20Basic, Blacklist {
   /**
    * @dev Get all pending transfer transactions of the sender
    */
-  function getPendingTransfers() public returns (Transaction[]) {
-      return pendingTransfers[msg.sender];
-  }
+  // function getPendingTransfers() public returns (Transaction[]) {
+  //     return pendingTransfers[msg.sender];
+  // }
 
   /**
    * @dev Get all pending receive transactions of the sender
    */
-  function getPendingReceives() public returns (Transaction[]) {
-      return pendingReceives[msg.sender];
-  }
+  // function getPendingReceives() public returns (Transaction[]) {
+  //     return pendingReceives[msg.sender];
+  // }
 
   /**
   * @dev Gets the balance of the specified address.

@@ -1,5 +1,5 @@
 pragma solidity ^0.4.21;
-
+pragma experimental ABIEncoderV2;
 
 import "./StandardToken.sol";
 import "../../math/SafeMath.sol";
@@ -26,8 +26,8 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
 
   uint256 totalSupply_;
 
-  event TransferCancelled(address _from, address _to, Transaction _tx);
-  event TransferConfirmed(address _from, address _to, Transaction _tx);
+  event TransferCancelled(address _from, address _to, uint256 _value);
+  event TransferConfirmed(address _from, address _to, uint256 _value);
 
   /**
   * @dev total number of tokens in existence
@@ -99,19 +99,21 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
   function cancelTransfer(bytes32 _txId) public returns (bool) {
     uint length = pendingTransfers[msg.sender].length;
     for (uint i = 0; i < length; i++) {
-      var transaction = pendingTransfers[msg.sender][i];
+      Transaction memory transaction;
+      transaction = pendingTransfers[msg.sender][i];
       if (_txId == transaction.txId && msg.sender == transaction.from) {
         delete pendingTransfers[msg.sender][i];
         uint len = pendingReceives[transaction.to].length;
         for (uint k = 0; k < len; k++) {
-          var tnx = pendingReceives[transaction.to][k];
+          Transaction memory tnx;
+          tnx = pendingReceives[transaction.to][k];
           if (_txId == tnx.txId && transaction.to == tnx.to) {
             delete pendingReceives[transaction.to][k];
-            emit TransferCancelled(msg.sender, transaction.to, transaction);
+            emit TransferCancelled(msg.sender, transaction.to, transaction.amount);
             return true;
           }
         }
-        emit TransferCancelled(msg.sender, transaction.to, transaction);
+        emit TransferCancelled(msg.sender, transaction.to, transaction.amount);
         return true;
       }
     }
@@ -125,7 +127,8 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
   function confirmTransfer(bytes32 _txId) public returns (bool) {
     uint length = pendingReceives[msg.sender].length;
     for (uint i = 0; i < length; i++) {
-      var transaction = pendingReceives[msg.sender][i];
+      Transaction memory transaction;
+      transaction = pendingReceives[msg.sender][i];
       if (_txId == transaction.txId && msg.sender == transaction.to) {
         if (transaction.to == address(0x0)) {
             revert();
@@ -145,14 +148,15 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
 
         uint len = pendingTransfers[transaction.from].length;
         for (uint k = 0; k < len; k++) {
-          var tnx = pendingReceives[transaction.from][k];
+          Transaction memory tnx;
+          tnx = pendingTransfers[transaction.from][k];
           if (_txId == tnx.txId && transaction.from == tnx.from) {
             delete pendingTransfers[transaction.from][k];
-            emit TransferConfirmed(transaction.from, msg.sender, transaction);
+            emit TransferConfirmed(transaction.from, msg.sender, transaction.amount);
             return true;
           }
         }
-        emit TransferConfirmed(transaction.from, msg.sender, transaction);
+        emit TransferConfirmed(transaction.from, msg.sender, transaction.amount);
         return true;
       }
     }
@@ -162,16 +166,16 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
   /**
    * @dev Get all pending transfer transactions of the sender
    */
-  // function getPendingTransfers() public returns (Transaction[]) {
-  //     return pendingTransfers[msg.sender];
-  // }
+  function getPendingTransfers() public view returns (Transaction[]) {
+      return pendingTransfers[msg.sender];
+  }
 
   /**
    * @dev Get all pending receive transactions of the sender
    */
-  // function getPendingReceives() public returns (Transaction[]) {
-  //     return pendingReceives[msg.sender];
-  // }
+  function getPendingReceives() public view returns (Transaction[]) {
+      return pendingReceives[msg.sender];
+  }
 
   /**
   * @dev Gets the balance of the specified address.

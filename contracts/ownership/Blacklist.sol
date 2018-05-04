@@ -97,7 +97,7 @@ contract Blacklist is Ownable {
   /**
    * @dev Get all blacklist wallet addresses
    */
-  function getBlacklist() public returns (address[]) {
+  function getBlacklist() public view returns (address[]) {
     return keys;
   }
 

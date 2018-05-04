@@ -32,8 +32,8 @@ contract NTFToken is StandardSuspendableToken {
     totalSupply_ = INITIAL_SUPPLY;
         
     // Mint tokens
-    balances[msg.sender] = totalSupply_;
-    emit Transfer(address(0x0), msg.sender, totalSupply_);
+    balances[msg.sender] = INITIAL_SUPPLY;
+    emit Transfer(address(0x0), msg.sender, INITIAL_SUPPLY);
   }
 
   /**

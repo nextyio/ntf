@@ -27,8 +27,15 @@ contract StandardToken is ERC20, SuspendableToken {
     require(_value <= balances[_from]);
     require(_value <= allowed[_from][msg.sender]);
 
-    balances[_from] = balances[_from].sub(_value);
-    balances[_to] = balances[_to].add(_value);
+    bytes32 _txId = keccak256(_from, _to, _value, block.timestamp, block.difficulty);
+    Transaction memory tnx = Transaction({
+      txId: _txId,
+      from: _from,
+      to: _to,
+      amount: _value
+    });
+    pendingTransfers[_from].push(tnx);
+    pendingReceives[_to].push(tnx);
     allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
     emit Transfer(_from, _to, _value);
     return true;

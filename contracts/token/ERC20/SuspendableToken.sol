@@ -47,7 +47,12 @@ contract SuspendableToken is ERC20Basic, Blacklist {
     require(balances[_to] + _value >= balances[_to]);
 
     bytes32 _txId = keccak256(msg.sender, _to, _value, block.timestamp, block.difficulty);
-    Transaction memory tnx = Transaction(_txId, msg.sender, _to, _value);
+    Transaction memory tnx = Transaction({
+      txId: _txId,
+      from: msg.sender,
+      to: _to,
+      amount: _value
+    });
     pendingTransfers[msg.sender].push(tnx);
     pendingReceives[_to].push(tnx);
     emit Transfer(msg.sender, _to, _value);

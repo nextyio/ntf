@@ -11,7 +11,8 @@ import "./Ownable.sol";
  */
 contract Blacklist is Ownable {
   mapping(address => bool) blacklist;
-  address[] public blacklistAddresses;
+
+  address[] public keys;
 
   event BlacklistedAddressAdded(address addr);
   event BlacklistedAddressRemoved(address addr);
@@ -39,8 +40,8 @@ contract Blacklist is Ownable {
    */
   function addAddressToBlacklist(address addr) onlyOwner public returns(bool success) {
     if (!blacklist[addr]) {
-      blacklistAddresses.push(addr);
       blacklist[addr] = true;
+      keys.push(addr);      
       emit BlacklistedAddressAdded(addr);
       success = true;
     }
@@ -69,9 +70,9 @@ contract Blacklist is Ownable {
   function removeAddressFromBlacklist(address addr) onlyOwner public returns(bool success) {
     if (blacklist[addr]) {
       blacklist[addr] = false;
-      for (uint i = 0; i < blacklistAddresses.length; i++) {
-        if (addr == blacklistAddresses[i]) {
-          delete blacklistAddresses[i];
+      for (uint i = 0; i < keys.length; i++) {
+        if (addr == keys[i]) {
+          delete keys[i];
         }
       }
       emit BlacklistedAddressRemoved(addr);
@@ -97,7 +98,7 @@ contract Blacklist is Ownable {
    * @dev Get all blacklist wallet addresses
    */
   function getBlacklist() public returns (address[]) {
-    return blacklistAddresses;
+    return keys;
   }
 
 }

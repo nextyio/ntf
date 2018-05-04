@@ -7,10 +7,10 @@ import "../../ownership/Blacklist.sol";
 
 
 /**
- * @title Suspendable token
+ * @title Standard Suspendable Token
  * @dev Suspendable basic version of StandardToken, with no allowances.
  */
-contract SuspendableToken is ERC20Basic, Blacklist {
+contract StandardSuspendableToken is ERC20Basic, Blacklist {
   using SafeMath for uint256;
 
   struct Transaction {

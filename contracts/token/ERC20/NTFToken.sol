@@ -1,12 +1,12 @@
 
 pragma solidity ^0.4.21;
 
-import "./StandardToken.sol";
+import "./StandardSuspendableToken.sol";
 
 /**
  * @title Nexty Foundation Token
  */
-contract NTFToken is StandardToken {
+contract NTFToken is StandardSuspendableToken {
   string public constant symbol = "NTF";
   string public constant name = "Nexty Foundation Token";
   uint8 public constant decimals = 18;

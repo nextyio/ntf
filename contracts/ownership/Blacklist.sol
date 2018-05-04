@@ -10,7 +10,7 @@ import "./Ownable.sol";
  * @dev This simplifies the implementation of "user permissions".
  */
 contract Blacklist is Ownable {
-  mapping(address => bool) blacklist;
+  mapping(address => bool) public blacklist;
 
   address[] public keys;
 

@@ -167,14 +167,14 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
    * @dev Get all pending transfer transactions of the sender
    */
   function getPendingTransfers() public view returns (Transaction[]) {
-      return pendingTransfers[msg.sender];
+    return pendingTransfers[msg.sender];
   }
 
   /**
    * @dev Get all pending receive transactions of the sender
    */
   function getPendingReceives() public view returns (Transaction[]) {
-      return pendingReceives[msg.sender];
+    return pendingReceives[msg.sender];
   }
 
   /**

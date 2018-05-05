@@ -10,6 +10,7 @@ require('chai')
 
 contract('NTFToken', function (accounts) {
     const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+    const ZERO_TX = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
     let token;
 
@@ -92,10 +93,33 @@ contract('NTFToken', function (accounts) {
                 const recipientBalance = await token.balanceOf(to);
                 assert.equal(recipientBalance, 0);
 
-                const pendingTransfers = await token.getPendingTransfers({ from: owner});
-                const pendingReceives = await token.getPendingReceives({ from: to});
+                let pendingTransfers = await token.getPendingTransfers({ from: owner});
+                let pendingReceives = await token.getPendingReceives({ from: to});
                 assert.equal(pendingTransfers.length, 1);
                 assert.equal(pendingReceives.length, 1);
+
+                await token.transfer(to, amount + 100, { from: owner });
+                pendingTransfers = await token.getPendingTransfers({ from: owner});
+                pendingReceives = await token.getPendingReceives({ from: to});
+                assert.equal(pendingTransfers.length, 2);
+                assert.equal(pendingReceives.length, 2);
+
+                await token.confirmTransfer(pendingReceives[0], {from: to});
+                const fromBalance = await token.balanceOf(owner);
+                assert.equal(fromBalance, 10000000 * (10 ** 18) - amount);
+
+                const toBalance = await token.balanceOf(to);
+                assert.equal(toBalance, amount);
+
+                pendingTransfers = await token.getPendingTransfers({ from: owner});
+                pendingReceives = await token.getPendingReceives({ from: to});
+                assert.equal(pendingTransfers.length, 2);
+                assert.equal(pendingReceives.length, 2);                
+                assert.equal(pendingTransfers[0], ZERO_TX);
+                assert.equal(pendingReceives[0], ZERO_TX);
+                await expectThrow(
+                    token.confirmTransfer(pendingReceives[0], {from: to})
+                );
             });
     
             it('emits a transfer event', async function () {

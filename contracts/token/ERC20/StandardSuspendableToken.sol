@@ -12,6 +12,8 @@ import "../../ownership/Blacklist.sol";
 contract StandardSuspendableToken is StandardToken, Blacklist {
   using SafeMath for uint256;
 
+  bytes32 public constant ZERO_TX = 0x0000000000000000000000000000000000000000000000000000000000000000;
+
   struct Transaction {
     bytes32 txId;
     address from;
@@ -102,6 +104,7 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
    * @param _txId The transaction id to be cancelled.
    */
   function cancelTransfer(bytes32 _txId) public returns (bool) {
+    require(_txId != ZERO_TX);
     uint length = pendingTransfers[msg.sender].length;
     for (uint i = 0; i < length; i++) {
       Transaction memory transaction;
@@ -132,6 +135,7 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
    * @param _txId The transaction id to confirm.
    */
   function confirmTransfer(bytes32 _txId) public returns (bool) {
+    require(_txId != ZERO_TX);
     uint length = pendingReceives[msg.sender].length;
     for (uint i = 0; i < length; i++) {
       Transaction memory transaction;

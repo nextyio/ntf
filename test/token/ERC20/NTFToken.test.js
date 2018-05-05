@@ -123,8 +123,12 @@ contract('NTFToken', function (accounts) {
                 assert.equal(pendingReceives.length, 2);                
                 assert.equal(pendingTransfers[0], ZERO_TX);
                 assert.equal(pendingReceives[0], ZERO_TX);
-                await expectThrow(
-                    token.confirmTransfer(pendingReceives[0], {from: to})
+                await assertRevert(
+                    token.confirmTransfer(ZERO_TX, {from: to})
+                );
+
+                await assertRevert(
+                    token.cancelTransfer(ZERO_TX, {from: owner})
                 );
 
                 await expectEvent.inTransaction(

@@ -86,14 +86,16 @@ contract('NTFToken', function (accounts) {
     
             it('transfers the requested amount', async function () {
                 await token.transfer(to, amount, { from: owner });
-                
                 const senderBalance = await token.balanceOf(owner);
-
                 assert.equal(senderBalance, 10000000 * (10 ** 18));
 
                 const recipientBalance = await token.balanceOf(to);
-                
                 assert.equal(recipientBalance, 0);
+
+                const pendingTransfers = await token.getPendingTransfers({ from: owner});
+                const pendingReceives = await token.getPendingReceives({ from: to});
+                assert.equal(pendingTransfers.length, 1);
+                assert.equal(pendingReceives.length, 1);
             });
     
             it('emits a transfer event', async function () {

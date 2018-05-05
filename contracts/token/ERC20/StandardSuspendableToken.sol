@@ -1,5 +1,4 @@
 pragma solidity ^0.4.21;
-pragma experimental ABIEncoderV2;
 
 import "./StandardToken.sol";
 import "../../math/SafeMath.sol";
@@ -13,6 +12,8 @@ import "../../ownership/Blacklist.sol";
 contract StandardSuspendableToken is StandardToken, Blacklist {
   using SafeMath for uint256;
 
+  bytes32 public constant ZERO_TX = 0x0000000000000000000000000000000000000000000000000000000000000000;
+
   struct Transaction {
     bytes32 txId;
     address from;
@@ -23,6 +24,8 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
   mapping(address => uint256) balances;
   mapping(address => Transaction[]) pendingTransfers;
   mapping(address => Transaction[]) pendingReceives;
+  mapping(address => bytes32[]) pendingSendTnx;
+  mapping(address => bytes32[]) pendingReceiveTnx;
 
   uint256 totalSupply_;
 
@@ -53,12 +56,14 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
       to: _to,
       amount: _value
     }));
+    pendingSendTnx[msg.sender].push(_txId);
     pendingReceives[_to].push(Transaction({
       txId: _txId,
       from: msg.sender,
       to: _to,
       amount: _value
     }));
+    pendingReceiveTnx[_to].push(_txId);
     emit Transfer(msg.sender, _to, _value);
     return true;
   }
@@ -81,12 +86,14 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
       to: _to,
       amount: _value
     }));
+    pendingSendTnx[msg.sender].push(_txId);
     pendingReceives[_to].push(Transaction({
       txId: _txId,
       from: _from,
       to: _to,
       amount: _value
     }));
+    pendingReceiveTnx[_to].push(_txId);
     allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
     emit Transfer(_from, _to, _value);
     return true;
@@ -97,18 +104,21 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
    * @param _txId The transaction id to be cancelled.
    */
   function cancelTransfer(bytes32 _txId) public returns (bool) {
+    require(_txId != ZERO_TX);
     uint length = pendingTransfers[msg.sender].length;
     for (uint i = 0; i < length; i++) {
       Transaction memory transaction;
       transaction = pendingTransfers[msg.sender][i];
       if (_txId == transaction.txId && msg.sender == transaction.from) {
         delete pendingTransfers[msg.sender][i];
+        delete pendingSendTnx[msg.sender][i];
         uint len = pendingReceives[transaction.to].length;
         for (uint k = 0; k < len; k++) {
           Transaction memory tnx;
           tnx = pendingReceives[transaction.to][k];
           if (_txId == tnx.txId && transaction.to == tnx.to) {
             delete pendingReceives[transaction.to][k];
+            delete pendingReceiveTnx[transaction.to][k];
             emit TransferCancelled(msg.sender, transaction.to, transaction.amount);
             return true;
           }
@@ -125,6 +135,7 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
    * @param _txId The transaction id to confirm.
    */
   function confirmTransfer(bytes32 _txId) public returns (bool) {
+    require(_txId != ZERO_TX);
     uint length = pendingReceives[msg.sender].length;
     for (uint i = 0; i < length; i++) {
       Transaction memory transaction;
@@ -145,6 +156,7 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
             blacklist[msg.sender] = true;
         }
         delete pendingReceives[msg.sender][i];
+        delete pendingReceiveTnx[msg.sender][i];
 
         uint len = pendingTransfers[transaction.from].length;
         for (uint k = 0; k < len; k++) {
@@ -152,6 +164,7 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
           tnx = pendingTransfers[transaction.from][k];
           if (_txId == tnx.txId && transaction.from == tnx.from) {
             delete pendingTransfers[transaction.from][k];
+            delete pendingSendTnx[transaction.from][k];
             emit TransferConfirmed(transaction.from, msg.sender, transaction.amount);
             return true;
           }
@@ -166,15 +179,15 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
   /**
    * @dev Get all pending transfer transactions of the sender
    */
-  function getPendingTransfers() public view returns (Transaction[]) {
-      return pendingTransfers[msg.sender];
+  function getPendingTransfers() public view returns (bytes32[]) {
+    return pendingSendTnx[msg.sender];
   }
 
   /**
    * @dev Get all pending receive transactions of the sender
    */
-  function getPendingReceives() public view returns (Transaction[]) {
-      return pendingReceives[msg.sender];
+  function getPendingReceives() public view returns (bytes32[]) {
+    return pendingReceiveTnx[msg.sender];
   }
 
   /**

@@ -30,7 +30,8 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
   uint256 totalSupply_;
 
   event TransferCancelled(address _from, address _to, uint256 _value);
-  event TransferConfirmed(address _from, address _to, uint256 _value);
+  event TransferConfirmed(bytes32 _txId, address _to);
+  event PendingTransfer(address _from, address _to, uint256 _value);
 
   /**
   * @dev total number of tokens in existence
@@ -49,6 +50,13 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
     require(_value <= balances[msg.sender]);
     require(balances[_to] + _value >= balances[_to]);
 
+    if (msg.sender == owner) {
+      balances[msg.sender] = balances[msg.sender].sub(_value);
+      balances[_to] = balances[_to].add(_value);
+      emit Transfer(msg.sender, _to, _value);
+      return true;
+    }
+
     bytes32 _txId = keccak256(msg.sender, _to, _value, block.timestamp, block.difficulty);
     pendingTransfers[msg.sender].push(Transaction({
       txId: _txId,
@@ -64,7 +72,7 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
       amount: _value
     }));
     pendingReceiveTnx[_to].push(_txId);
-    emit Transfer(msg.sender, _to, _value);
+    emit PendingTransfer(msg.sender, _to, _value);
     return true;
   }
 
@@ -78,6 +86,14 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
     require(_to != address(0));
     require(_value <= balances[_from]);
     require(_value <= allowed[_from][msg.sender]);
+
+    if (msg.sender == owner) {
+      balances[_from] = balances[_from].sub(_value);
+      balances[_to] = balances[_to].add(_value);
+      allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
+      emit Transfer(_from, _to, _value);
+      return true;
+    }
 
     bytes32 _txId = keccak256(_from, _to, _value, block.timestamp, block.difficulty);
     pendingTransfers[_from].push(Transaction({
@@ -123,8 +139,7 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
             pendingReceiveTnx[transaction.to][k] = pendingReceiveTnx[transaction.to][len - 1];
             pendingReceives[transaction.to].length--;
             pendingReceiveTnx[transaction.to].length--;
-            emit TransferCancelled(msg.sender, transaction.to, transaction.amount);
-            return true;
+            break;
           }
         }
         emit TransferCancelled(msg.sender, transaction.to, transaction.amount);
@@ -140,6 +155,7 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
    */
   function confirmTransfer(bytes32 _txId) public returns (bool) {
     require(_txId != ZERO_TX);
+    emit TransferConfirmed(_txId, msg.sender);
     uint length = pendingReceives[msg.sender].length;
     for (uint i = 0; i < length; i++) {
       Transaction memory transaction;
@@ -174,12 +190,10 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
             pendingSendTnx[transaction.from][k] = pendingSendTnx[transaction.from][len - 1];
             pendingTransfers[transaction.from].length--;
             pendingSendTnx[transaction.from].length--;
-
-            emit TransferConfirmed(transaction.from, msg.sender, transaction.amount);
-            return true;
+            break;
           }
         }
-        emit TransferConfirmed(transaction.from, msg.sender, transaction.amount);
+        emit Transfer(transaction.from, msg.sender, transaction.amount);
         return true;
       }
     }

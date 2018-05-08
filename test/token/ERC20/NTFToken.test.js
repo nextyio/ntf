@@ -16,6 +16,7 @@ contract('NTFToken', function (accounts) {
 
     const [
         owner,
+        sender,
         recipient,
         blacklistedAddress1,
         blacklistedAddress2,
@@ -87,22 +88,27 @@ contract('NTFToken', function (accounts) {
     
             it('transfers the requested amount', async function () {
                 await expectEvent.inTransaction(
-                    token.transfer(to, amount, { from: owner }),
+                    token.transfer(sender, amount, { from: owner }),
                     'Transfer'
                 );
-                const senderBalance = await token.balanceOf(owner);
-                assert.equal(senderBalance, 10000000 * (10 ** 18));
+                const senderBalance = await token.balanceOf(sender);
+                assert.equal(senderBalance, 100);
 
                 const recipientBalance = await token.balanceOf(to);
                 assert.equal(recipientBalance, 0);
 
-                let pendingTransfers = await token.getPendingTransfers({ from: owner});
+                await expectEvent.inTransaction(
+                    token.transfer(to, 10, { from: sender }),
+                    'PendingTransfer'
+                );
+
+                let pendingTransfers = await token.getPendingTransfers({ from: sender});
                 let pendingReceives = await token.getPendingReceives({ from: to});
                 assert.equal(pendingTransfers.length, 1);
                 assert.equal(pendingReceives.length, 1);
 
-                await token.transfer(to, amount + 100, { from: owner });
-                pendingTransfers = await token.getPendingTransfers({ from: owner});
+                await token.transfer(to, 20, { from: sender });
+                pendingTransfers = await token.getPendingTransfers({ from: sender});
                 pendingReceives = await token.getPendingReceives({ from: to});
                 assert.equal(pendingTransfers.length, 2);
                 assert.equal(pendingReceives.length, 2);
@@ -111,13 +117,13 @@ contract('NTFToken', function (accounts) {
                     token.confirmTransfer(pendingReceives[0], {from: to}),
                     'TransferConfirmed'
                 );
-                const fromBalance = await token.balanceOf(owner);
-                assert.equal(fromBalance, 10000000 * (10 ** 18) - amount);
+                const fromBalance = await token.balanceOf(sender);
+                assert.equal(fromBalance, 90);
 
                 const toBalance = await token.balanceOf(to);
-                assert.equal(toBalance, amount);
+                assert.equal(toBalance, 10);
 
-                pendingTransfers = await token.getPendingTransfers({ from: owner});
+                pendingTransfers = await token.getPendingTransfers({ from: sender});
                 pendingReceives = await token.getPendingReceives({ from: to});
                 assert.equal(pendingTransfers.length, 1);
                 assert.equal(pendingReceives.length, 1);
@@ -126,23 +132,23 @@ contract('NTFToken', function (accounts) {
                 );
 
                 await assertRevert(
-                    token.cancelTransfer(ZERO_TX, {from: owner})
+                    token.cancelTransfer(ZERO_TX, {from: sender})
                 );
 
                 await expectEvent.inTransaction(
-                    token.cancelTransfer(pendingTransfers[0], {from: owner}),
+                    token.cancelTransfer(pendingTransfers[0], {from: sender}),
                     'TransferCancelled'
                 );
-                pendingTransfers = await token.getPendingTransfers({ from: owner});
+                pendingTransfers = await token.getPendingTransfers({ from: sender});
                 pendingReceives = await token.getPendingReceives({ from: to});
                 assert.equal(pendingTransfers.length, 0);
                 assert.equal(pendingReceives.length, 0);
 
-                const ownerBalance = await token.balanceOf(owner);
-                assert.equal(ownerBalance, 10000000 * (10 ** 18) - amount);
+                const ownerBalance = await token.balanceOf(sender);
+                assert.equal(ownerBalance, 90);
 
                 const receiveBalance = await token.balanceOf(to);
-                assert.equal(receiveBalance, amount);
+                assert.equal(receiveBalance, 10);
             });
     
             it('emits a transfer event', async function () {

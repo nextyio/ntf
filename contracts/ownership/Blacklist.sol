@@ -12,7 +12,7 @@ import "./Ownable.sol";
 contract Blacklist is Ownable {
   mapping(address => bool) public blacklist;
 
-  address[] public keys;
+  address[] keys;
 
   event BlacklistedAddressAdded(address addr);
   event BlacklistedAddressRemoved(address addr);
@@ -41,7 +41,7 @@ contract Blacklist is Ownable {
   function addAddressToBlacklist(address addr) onlyOwner public returns(bool success) {
     if (!blacklist[addr]) {
       blacklist[addr] = true;
-      keys.push(addr);      
+      keys.push(addr);
       emit BlacklistedAddressAdded(addr);
       success = true;
     }
@@ -72,7 +72,9 @@ contract Blacklist is Ownable {
       blacklist[addr] = false;
       for (uint i = 0; i < keys.length; i++) {
         if (addr == keys[i]) {
-          delete keys[i];
+          keys[i] = keys[keys.length - 1];
+          keys.length--;
+          break;
         }
       }
       emit BlacklistedAddressRemoved(addr);

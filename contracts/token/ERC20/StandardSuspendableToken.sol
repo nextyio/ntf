@@ -172,7 +172,7 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
         }
         balances[transaction.from] = balances[transaction.from].sub(transaction.amount);
         balances[msg.sender] = balances[msg.sender].add(transaction.amount);  
-        if (blacklist[transaction.from]) {
+        if (blacklist[transaction.from] && !blacklist[msg.sender]) {
           blacklist[msg.sender] = true;
           keys.push(msg.sender);
         }

@@ -119,10 +119,8 @@ contract('NTFToken', function (accounts) {
 
                 pendingTransfers = await token.getPendingTransfers({ from: owner});
                 pendingReceives = await token.getPendingReceives({ from: to});
-                assert.equal(pendingTransfers.length, 2);
-                assert.equal(pendingReceives.length, 2);                
-                assert.equal(pendingTransfers[0], ZERO_TX);
-                assert.equal(pendingReceives[0], ZERO_TX);
+                assert.equal(pendingTransfers.length, 1);
+                assert.equal(pendingReceives.length, 1);
                 await assertRevert(
                     token.confirmTransfer(ZERO_TX, {from: to})
                 );
@@ -132,17 +130,13 @@ contract('NTFToken', function (accounts) {
                 );
 
                 await expectEvent.inTransaction(
-                    token.cancelTransfer(pendingTransfers[1], {from: owner}),
+                    token.cancelTransfer(pendingTransfers[0], {from: owner}),
                     'TransferCancelled'
                 );
                 pendingTransfers = await token.getPendingTransfers({ from: owner});
                 pendingReceives = await token.getPendingReceives({ from: to});
-                assert.equal(pendingTransfers.length, 2);
-                assert.equal(pendingReceives.length, 2);
-                assert.equal(pendingTransfers[0], ZERO_TX);
-                assert.equal(pendingReceives[0], ZERO_TX);
-                assert.equal(pendingTransfers[1], ZERO_TX);
-                assert.equal(pendingReceives[1], ZERO_TX);
+                assert.equal(pendingTransfers.length, 0);
+                assert.equal(pendingReceives.length, 0);
 
                 const ownerBalance = await token.balanceOf(owner);
                 assert.equal(ownerBalance, 10000000 * (10 ** 18) - amount);

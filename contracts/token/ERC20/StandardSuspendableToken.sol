@@ -12,7 +12,7 @@ import "../../ownership/Blacklist.sol";
 contract StandardSuspendableToken is StandardToken, Blacklist {
   using SafeMath for uint256;
 
-  bytes32 public constant ZERO_TX = 0x0000000000000000000000000000000000000000000000000000000000000000;
+  bytes32 constant ZERO_TX = 0x0000000000000000000000000000000000000000000000000000000000000000;
 
   struct Transaction {
     bytes32 txId;
@@ -110,15 +110,19 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
       Transaction memory transaction;
       transaction = pendingTransfers[msg.sender][i];
       if (_txId == transaction.txId && msg.sender == transaction.from) {
-        delete pendingTransfers[msg.sender][i];
-        delete pendingSendTnx[msg.sender][i];
+        pendingTransfers[msg.sender][i] = pendingTransfers[msg.sender][length - 1];
+        pendingSendTnx[msg.sender][i] = pendingSendTnx[msg.sender][length - 1];
+        pendingTransfers[msg.sender].length--;
+        pendingSendTnx[msg.sender].length--;
         uint len = pendingReceives[transaction.to].length;
         for (uint k = 0; k < len; k++) {
           Transaction memory tnx;
           tnx = pendingReceives[transaction.to][k];
           if (_txId == tnx.txId && transaction.to == tnx.to) {
-            delete pendingReceives[transaction.to][k];
-            delete pendingReceiveTnx[transaction.to][k];
+            pendingReceives[transaction.to][k] = pendingReceives[transaction.to][len - 1];
+            pendingReceiveTnx[transaction.to][k] = pendingReceiveTnx[transaction.to][len - 1];
+            pendingReceives[transaction.to].length--;
+            pendingReceiveTnx[transaction.to].length--;
             emit TransferCancelled(msg.sender, transaction.to, transaction.amount);
             return true;
           }
@@ -153,18 +157,24 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
         balances[transaction.from] = balances[transaction.from].sub(transaction.amount);
         balances[msg.sender] = balances[msg.sender].add(transaction.amount);  
         if (blacklist[transaction.from]) {
-            blacklist[msg.sender] = true;
+          blacklist[msg.sender] = true;
+          keys.push(msg.sender);
         }
-        delete pendingReceives[msg.sender][i];
-        delete pendingReceiveTnx[msg.sender][i];
+        pendingReceives[msg.sender][i] = pendingReceives[msg.sender][length - 1];
+        pendingReceiveTnx[msg.sender][i] = pendingReceiveTnx[msg.sender][length - 1];
+        pendingReceives[msg.sender].length--;
+        pendingReceiveTnx[msg.sender].length--;
 
         uint len = pendingTransfers[transaction.from].length;
         for (uint k = 0; k < len; k++) {
           Transaction memory tnx;
           tnx = pendingTransfers[transaction.from][k];
           if (_txId == tnx.txId && transaction.from == tnx.from) {
-            delete pendingTransfers[transaction.from][k];
-            delete pendingSendTnx[transaction.from][k];
+            pendingTransfers[transaction.from][k] = pendingTransfers[transaction.from][len - 1];
+            pendingSendTnx[transaction.from][k] = pendingSendTnx[transaction.from][len - 1];
+            pendingTransfers[transaction.from].length--;
+            pendingSendTnx[transaction.from].length--;
+
             emit TransferConfirmed(transaction.from, msg.sender, transaction.amount);
             return true;
           }

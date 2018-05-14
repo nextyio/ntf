@@ -33,13 +33,20 @@ contract('NTFToken', function (accounts) {
         it('should have an owner', async function () {
             let owner_ = await token.owner();
             assert.isTrue(owner_ !== 0);
+            let holders = await token.getHolders();
+            assert.equal(holders.length, 1);
+            assert.equal(holders[0], owner_);
         });
         
         it('changes owner after transfer', async function () {
+            let oldOwner = await token.owner();
             await token.transferOwnership(anyone);
             let owner_ = await token.owner();
         
             assert.isTrue(owner_ === anyone);
+            let holders = await token.getHolders();
+            assert.equal(holders.length, 1);
+            assert.equal(holders[0], oldOwner);
         });
         
         it('should prevent non-owners from transfering', async function () {
@@ -48,16 +55,91 @@ contract('NTFToken', function (accounts) {
             await assertRevert(token.transferOwnership(recipient, { from: anyone }));
         });
         
-          it('should guard ownership against stuck state', async function () {
+        it('should guard ownership against stuck state', async function () {
             let originalOwner = await token.owner();
             await assertRevert(token.transferOwnership(null, { from: originalOwner }));
-          });        
+        });        
     });
   
     describe('total supply', function () {
         it('returns the total amount of tokens', async function () {
             const totalSupply = await token.totalSupply();
             assert.equal(totalSupply, 10000000 * (10 ** 18));
+        });
+    });
+
+    describe('token holder', function() {
+        it('owner is the first and unique token holder from the beginning', async function() {
+            let owner_ = await token.owner();
+            let holders = await token.getHolders();
+            assert.equal(holders.length, 1);
+            assert.equal(holders[0], owner_);
+        });
+
+        it('a new token holder after transfer token succesfully', async function() {
+            const amount = 100;
+            await expectEvent.inTransaction(
+                token.transfer(recipient, amount, { from: owner }),
+                'Transfer'
+            );
+            let holders = await token.getHolders();
+            assert.equal(holders.length, 2);
+        });
+
+        it('two new token holders after transfer token succesfully', async function() {
+            const amount = 100;
+            await expectEvent.inTransaction(
+                token.transfer(recipient, amount, { from: owner }),
+                'Transfer'
+            );
+            await expectEvent.inTransaction(
+                token.transfer(sender, amount, { from: owner }),
+                'Transfer'
+            );
+
+            let holders = await token.getHolders();
+            assert.equal(holders.length, 3);
+        });
+
+        it('some new token holders after transfer token succesfully', async function() {
+            const amount = 100;
+            await expectEvent.inTransaction(
+                token.transfer(recipient, amount, { from: owner }),
+                'Transfer'
+            );
+            await expectEvent.inTransaction(
+                token.transfer(sender, amount, { from: owner }),
+                'Transfer'
+            );
+            await expectEvent.inTransaction(
+                token.transfer(recipient, amount, { from: sender }),
+                'PendingTransfer'
+            );
+            let holders = await token.getHolders();
+            assert.equal(holders.length, 3);
+        });
+
+        it('some new token holders after confirm/transfer token succesfully', async function() {
+            const amount = 100;
+            await expectEvent.inTransaction(
+                token.transfer(recipient, amount, { from: owner }),
+                'Transfer'
+            );
+            await expectEvent.inTransaction(
+                token.transfer(sender, amount, { from: owner }),
+                'Transfer'
+            );
+            await expectEvent.inTransaction(
+                token.transfer(recipient, amount, { from: sender }),
+                'PendingTransfer'
+            );
+            let pendingReceives = await token.getPendingReceives({ from: recipient });
+            await expectEvent.inTransaction(
+                token.confirmTransfer(pendingReceives[0], {from: recipient}),
+                'TransferConfirmed'
+            );
+            let holders = await token.getHolders();
+            assert.equal(holders.length, 2);
         });
     });
 

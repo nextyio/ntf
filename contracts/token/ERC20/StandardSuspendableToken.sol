@@ -22,6 +22,7 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
   }
 
   mapping(address => uint256) balances;
+  address[] holders;
   mapping(address => Transaction[]) pendingTransfers;
   mapping(address => Transaction[]) pendingReceives;
   mapping(address => bytes32[]) pendingSendTnx;
@@ -47,11 +48,24 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
   */
   function transfer(address _to, uint256 _value) public returns (bool) {
     require(_to != address(0x0));
+    require(_value > uint256(0x0));
     require(_value <= balances[msg.sender]);
     require(balances[_to] + _value >= balances[_to]);
 
     if (msg.sender == owner) {
+      if (balances[_to] == uint256(0x0)) {
+        holders.push(_to);
+      }
       balances[msg.sender] = balances[msg.sender].sub(_value);
+      if (balances[msg.sender] == uint256(0x0)) {
+        for (uint h = 0; h < holders.length; h++) {
+          if (msg.sender == holders[h]) {
+            holders[h] = holders[keys.length - 1];
+            holders.length--;
+            break;
+          }
+        }
+      }
       balances[_to] = balances[_to].add(_value);
       emit Transfer(msg.sender, _to, _value);
       return true;
@@ -84,13 +98,26 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
    */
   function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
     require(_to != address(0));
+    require(_value > uint256(0x0));
     require(_value <= balances[_from]);
     require(_value <= allowed[_from][msg.sender]);
 
     if (msg.sender == owner) {
+      if (balances[_to] == uint256(0x0)) {
+        holders.push(_to);
+      }
       balances[_from] = balances[_from].sub(_value);
       balances[_to] = balances[_to].add(_value);
       allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
+      if (balances[_from] == uint256(0x0)) {
+        for (uint h = 0; h < holders.length; h++) {
+          if (_from == holders[h]) {
+            holders[h] = holders[holders.length - 1];
+            holders.length--;
+            break;
+          }
+        }
+      }
       emit Transfer(_from, _to, _value);
       return true;
     }
@@ -170,8 +197,20 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
         if (balances[transaction.to] + transaction.amount < balances[transaction.to]) {
             revert();
         }
+        if (balances[msg.sender] == uint256(0x0)) {
+          holders.push(msg.sender);
+        }
         balances[transaction.from] = balances[transaction.from].sub(transaction.amount);
-        balances[msg.sender] = balances[msg.sender].add(transaction.amount);  
+        balances[msg.sender] = balances[msg.sender].add(transaction.amount);
+        if (balances[transaction.from] == uint256(0x0)) {
+          for (uint h = 0; h < holders.length; h++) {
+            if (transaction.from == holders[h]) {
+              holders[h] = holders[holders.length - 1];
+              holders.length--;
+              break;
+            }
+          }
+        }
         if (blacklist[transaction.from] && !blacklist[msg.sender]) {
           blacklist[msg.sender] = true;
           keys.push(msg.sender);

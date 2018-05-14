@@ -254,12 +254,20 @@ contract StandardSuspendableToken is StandardToken, Blacklist {
   }
 
   /**
-  * @dev Gets the balance of the specified address.
-  * @param _owner The address to query the the balance of.
-  * @return An uint256 representing the amount owned by the passed address.
-  */
+   * @dev Gets the balance of the specified address.
+   * @param _owner The address to query the the balance of.
+   * @return An uint256 representing the amount owned by the passed address.
+   */
   function balanceOf(address _owner) public view returns (uint256) {
     return balances[_owner];
+  }
+
+  /**
+   * @dev Get all the list of current token holder.
+   * @return array of all token holder.
+   */
+  function getHolders() public view returns (address[]) {
+    return holders;
   }
 
 }

@@ -48,17 +48,65 @@ contract('NTFToken', function (accounts) {
             assert.equal(holders.length, 1);
             assert.equal(holders[0], oldOwner);
         });
-        
+
         it('should prevent non-owners from transfering', async function () {
             const owner_ = await token.owner.call();
             assert.isTrue(owner_ !== recipient);
             await assertRevert(token.transferOwnership(recipient, { from: anyone }));
         });
-        
+
         it('should guard ownership against stuck state', async function () {
             let originalOwner = await token.owner();
             await assertRevert(token.transferOwnership(null, { from: originalOwner }));
-        });        
+        });
+    });
+
+    describe('coinbase', function() {
+        it('can set the coinbase', async function() {
+            await expectEvent.inTransaction(
+                token.setCoinbase(recipient, { from: owner }),
+                'SetCoinbase'
+            );
+
+            let coinbase = await token.getCoinbase({ from: owner });
+            assert.equal(coinbase, recipient);
+        });
+
+        it('can update the coinbase by re-call set method', async function() {
+            await expectEvent.inTransaction(
+                token.setCoinbase(recipient, { from: owner }),
+                'SetCoinbase'
+            );
+
+            // update
+            await expectEvent.inTransaction(
+                token.setCoinbase(sender, { from: owner }),
+                'SetCoinbase'
+            );
+
+            let coinbase = await token.getCoinbase({ from: owner });
+            assert.equal(coinbase, sender);
+        });
+
+        it('cannot set coinbase if the sender dont hold any NTF token', async function() {
+            await assertRevert(token.setCoinbase(recipient, { from: sender }));
+        });
+
+        it('can set coinbase after receiving NTF token', async function() {
+            const amount = 100;
+            await expectEvent.inTransaction(
+                token.transfer(recipient, amount, { from: owner }),
+                'Transfer'
+            );
+
+            await expectEvent.inTransaction(
+                token.setCoinbase(anyone, { from: recipient }),
+                'SetCoinbase'
+            );
+
+            let coinbase = await token.getCoinbase({ from: recipient });
+            assert.equal(coinbase, anyone);
+        });
     });
   
     describe('total supply', function () {

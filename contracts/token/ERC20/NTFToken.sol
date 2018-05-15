@@ -11,7 +11,11 @@ contract NTFToken is StandardSuspendableToken {
   string public constant name = "Nexty Foundation Token";
   uint8 public constant decimals = 18;
   uint256 public constant INITIAL_SUPPLY = 10000000 * (10 ** uint256(decimals));
-  
+
+  mapping(address => address) coinbase;
+
+  event SetCoinbase(address _from, address _to);
+
   /**
    * Check if address is a valid destination to transfer tokens to
    * - must not be zero address
@@ -57,4 +61,25 @@ contract NTFToken is StandardSuspendableToken {
   function transferFrom(address _from, address _to, uint256 _value) public validDestination(_to) returns (bool) {
     return super.transferFrom(_from, _to, _value);
   }
+
+  /**
+   * Token holder can call method to set/update their coinbase for mining.
+   *
+   * @param _to Destination address
+   */
+  function setCoinbase(address _to) public validDestination(_to) returns (bool) {
+    require(balances[msg.sender] > 0);
+
+    coinbase[msg.sender] = _to;
+    emit SetCoinbase(msg.sender, _to);
+    return true;
+  }
+
+  /**
+   * Get coinbase address of token holder
+   */
+  function getCoinbase() public view returns (address) {
+    return coinbase[msg.sender];
+  }
+
 }
